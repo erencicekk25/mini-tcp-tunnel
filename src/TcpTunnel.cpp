@@ -326,9 +326,6 @@ std::string ByteTransformer::describe() const
 TcpTunnel::TcpTunnel(TunnelConfig config)
     : config_(std::move(config)), transformer_(config_.xorKey)
 {
-    if (config_.listenPort == 0) {
-        throw std::invalid_argument("listen port must be in range 1-65535");
-    }
     if (config_.targetHost.empty()) {
         throw std::invalid_argument("target host must not be empty");
     }
