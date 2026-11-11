@@ -86,7 +86,8 @@ private:
 // ---------------------------------------------------------------------------
 struct TunnelConfig {
     std::string listenAddress = "0.0.0.0";
-    std::uint16_t listenPort = 0;                 // 0 => let the OS pick a free port (see boundPort())    std::string targetHost;
+    std::uint16_t listenPort = 0;                // 0 => OS picks a free port (see boundPort())
+    std::string targetHost;
     std::uint16_t targetPort = 0;
     std::optional<std::uint8_t> xorKey;          // std::nullopt => pass-through
     std::size_t maxSessions = 64;                // concurrent client connections
