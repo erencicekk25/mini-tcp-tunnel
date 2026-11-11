@@ -1,5 +1,9 @@
 # mini-tcp-tunnel
 
+[![CI](https://github.com/erencicekk25/./actions/workflows/ci.yml/badge.svg)](https://github.com/erencicekk25/./actions/workflows/ci.yml)
+![Language](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Ham Berkeley soketleri (`sys/socket.h`, `netinet/in.h`) ve `select()` ile, **hiçbir harici kütüphane kullanmadan** C++17'de yazılmış, eğitim amaçlı, çift yönlü (bi-directional) bir TCP tüneli / proxy'si.
 
 ```
@@ -57,6 +61,9 @@ mini-tcp-tunnel/
 ├── src/
 │   ├── TcpTunnel.cpp       # Event loop, oturum yaşam döngüsü, veri pompalama
 │   └── main.cpp            # Komut satırı arayüzü (CLI) ve sinyal yönetimi
+├── tests/
+│   └── TunnelTests.cpp     # Birim testleri + loopback üzerinde uçtan uca testler
+├── .github/workflows/ci.yml  # Linux / macOS + sanitizer CI
 └── README.md
 ```
 
@@ -337,6 +344,25 @@ mini-tcp-tunnel -l <port> -t <host> -p <port> [seçenekler]
 ---
 
 ## Test senaryoları
+
+### Otomatik testler
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+`tests/TunnelTests.cpp`, harici bir framework kullanmadan şunları kontrol ediyor:
+
+- XOR dönüşümünün kendi tersi olduğu ve pass-through modunda baytlara dokunulmadığı
+- `UniqueFd`'nin taşıma, `release()` ve `reset()` sırasında descriptor'ı doğru sahiplendiği ve gerçekten kapattığı
+- Loopback'te gerçek bir hedef sunucuyla 512 KiB verinin iki yönde de bozulmadan taşınması
+- XOR modunda hedefin dönüştürülmüş baytları gördüğü, yanıtın ise istemciye orijinal haliyle döndüğü
+- Aynı anda açık beş istemcinin birbirine karışmadan servis edilmesi
+- Hedef kapalıyken istemci bağlantısının beklemeden kapatılması
+
+Tünel testlerde `--listen-port 0` mantığıyla rastgele bir porta bağlanıyor ve `TcpTunnel::boundPort()` ile gerçek portu bildiriyor; böylece testler paralel CI ortamlarında port çakışmasına takılmıyor. GitHub Actions her push'ta testleri Linux ve macOS'ta, ayrıca ASan + UBSan açıkken çalıştırıyor.
+
+### Elle deneme
 
 Aşağıdaki örneklerde her komutu ayrı bir terminalde çalıştırın.
 
