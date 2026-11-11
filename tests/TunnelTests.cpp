@@ -143,6 +143,8 @@ std::string readUntilEof(int fd, std::chrono::milliseconds timeout = 10s) {
 }
 
 // Target server: echoes everything back and remembers the raw bytes it saw.
+// Each connection gets its own thread so concurrent sessions never wait on
+// each other.
 class EchoTarget {
 public:
     EchoTarget() : listener_(listenOnLoopback(port_)) { thread_ = std::thread(&EchoTarget::serve, this); }
@@ -150,6 +152,9 @@ public:
     ~EchoTarget() {
         running_ = false;
         thread_.join();
+        for (auto& worker : workers_) {
+            worker.join();
+        }
     }
 
     EchoTarget(const EchoTarget&) = delete;
@@ -172,13 +177,17 @@ private:
             if (!client.valid()) {
                 continue;
             }
-            const std::string data = readUntilEof(client.get());
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                lastReceived_ = data;
-            }
-            sendAll(client.get(), data);
+            workers_.emplace_back(&EchoTarget::echo, this, std::move(client));
         }
+    }
+
+    void echo(tunnel::UniqueFd client) {
+        const std::string data = readUntilEof(client.get());
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            lastReceived_ = data;
+        }
+        sendAll(client.get(), data);
     }
 
     std::uint16_t port_ = 0;
@@ -187,6 +196,7 @@ private:
     mutable std::mutex mutex_;
     std::string lastReceived_;
     std::thread thread_;
+    std::vector<std::thread> workers_;  // Only touched by the accept thread until join.
 };
 
 // Runs a TcpTunnel on a background thread for the lifetime of the object.
