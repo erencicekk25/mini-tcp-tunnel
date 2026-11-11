@@ -92,3 +92,17 @@ set_target_properties(mini-tcp-tunnel PROPERTIES
 )
 
 install(TARGETS mini-tcp-tunnel RUNTIME DESTINATION bin)
+
+# ---------------------------------------------------------------------------
+# Tests: transformer, fd wrapper and loopback round trips through the tunnel
+# ---------------------------------------------------------------------------
+option(TUNNEL_BUILD_TESTS "Build the test suite" ON)
+if(TUNNEL_BUILD_TESTS)
+    enable_testing()
+    find_package(Threads REQUIRED)
+    add_executable(tunnel_tests tests/TunnelTests.cpp)
+    target_link_libraries(tunnel_tests PRIVATE tcptunnel tunnel_project_options Threads::Threads)
+    set_target_properties(tunnel_tests PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    add_test(NAME tunnel_tests COMMAND tunnel_tests)
+    set_tests_properties(tunnel_tests PROPERTIES TIMEOUT 120)
+endif()

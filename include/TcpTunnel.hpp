@@ -123,6 +123,10 @@ public:
     void stop() noexcept;
 
     [[nodiscard]] const TunnelConfig& config() const noexcept { return config_; }
+
+    // Port the listener is bound to; 0 until run() has opened it. Thread-safe,
+    // so callers can wait for readiness when listenPort is 0 (ephemeral).
+    [[nodiscard]] std::uint16_t boundPort() const noexcept { return boundPort_.load(); }
     [[nodiscard]] std::size_t activeSessionCount() const noexcept { return sessions_.size(); }
 
 private:
@@ -168,6 +172,7 @@ private:
     std::uint64_t totalBytesDownstream_ = 0;
 
     std::atomic<bool> stopRequested_{false};
+    std::atomic<std::uint16_t> boundPort_{0};
     static_assert(std::atomic<bool>::is_always_lock_free,
                   "stop() must be async-signal-safe, which requires a lock-free atomic");
 };

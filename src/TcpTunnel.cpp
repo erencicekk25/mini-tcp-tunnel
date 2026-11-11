@@ -431,7 +431,19 @@ void TcpTunnel::openListener()
         throwSystemError(error, "making listener non-blocking failed");
     }
 
-    listenDescription_ = formatAddress(address.ai_addr, address.ai_addrlen);
+    // Report the address we actually got: with port 0 the kernel picks one.
+    sockaddr_storage bound{};
+    socklen_t boundLength = sizeof(bound);
+    if (::getsockname(fd.get(), reinterpret_cast<sockaddr*>(&bound), &boundLength) == 0) {
+        listenDescription_ = formatAddress(reinterpret_cast<const sockaddr*>(&bound), boundLength);
+        const in_port_t port = bound.ss_family == AF_INET6
+                                   ? reinterpret_cast<const sockaddr_in6*>(&bound)->sin6_port
+                                   : reinterpret_cast<const sockaddr_in*>(&bound)->sin_port;
+        boundPort_.store(ntohs(port));
+    } else {
+        listenDescription_ = formatAddress(address.ai_addr, address.ai_addrlen);
+        boundPort_.store(config_.listenPort);
+    }
     listenFd_ = std::move(fd);
 }
 
